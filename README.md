@@ -28,16 +28,20 @@ player stats ──► scouting sentence ──(EIS embeds)──► semantic_te
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env          # then paste in your ES_URL + ES_API_KEY
+cp .env.example .env          # paste in ES_URL, ES_API_KEY, KIBANA_URL
 
 python discover.py            # 1. confirm connection + find your EIS chat endpoint id
                               #    (set CHAT_INFERENCE_ID in .env if it differs)
 python ingest.py              # 2. download dataset + index it with semantic_text
-streamlit run app.py          # 3. demo
+python agent_builder_setup.py # 3. create the Agent Builder tools + agent
+streamlit run app.py          # 4. (optional) the flashy visual demo
 ```
 
 Point `ingest.py` at a local file instead of Kaggle with:
 `python ingest.py path/to/players.csv`
+
+**Presentation:** use `demo_queries.md` — it has the exact vector-search query and
+Agent Builder tools to show on screen (that's what the judges ask for).
 
 ## Files
 
@@ -48,7 +52,19 @@ Point `ingest.py` at a local file instead of Kaggle with:
 | `scouting.py` | turns numeric stats → natural-language style text |
 | `ingest.py` | creates the `semantic_text` index and bulk-loads players |
 | `scout_engine.py` | Elastic search + Bedrock report (with a safe fallback) |
+| `agent_builder_setup.py` | registers the ES|QL tools + Injury Scout agent |
 | `app.py` | Streamlit demo UI |
+| `demo_queries.md` | copy-paste queries + rubric checklist for the pitch |
+
+## How it maps to the judging rubric
+
+| Judging criterion | Where we hit it |
+|---|---|
+| Meaningful Elasticsearch (search, aggregations, vector search, **Agent Builder**) | filter/pool + `semantic` vector query + two ES|QL tools + the agent |
+| Managed LLM via **AWS Bedrock / EIS** | the agent (and `scout_engine.py`) generate the report through EIS |
+| Creativity / novel idea | injury-replacement scout by *playing style*, not stats lookup |
+| Solves a real problem | "next man up" is a real manager decision |
+| **Must**: serverless Elastic deployment | runs on Elastic Cloud Serverless |
 
 ## Data
 

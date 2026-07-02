@@ -8,6 +8,9 @@ load_dotenv()
 
 ES_URL = os.getenv("ES_URL")
 ES_API_KEY = os.getenv("ES_API_KEY")
+# Kibana endpoint (same project host as ES, usually the ".kb." URL) — needed for
+# creating Agent Builder tools/agents via the API.
+KIBANA_URL = os.getenv("KIBANA_URL")
 # Elastic's default EIS managed chat endpoint. Override in .env if discover.py
 # shows a different id on your cluster.
 CHAT_INFERENCE_ID = os.getenv("CHAT_INFERENCE_ID", ".rainbow-sprinkles-elastic")
