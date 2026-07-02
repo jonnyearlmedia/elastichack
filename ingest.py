@@ -60,10 +60,28 @@ def create_index(es):
     print(f"Created index {INDEX_NAME}")
 
 
+def one_row_per_player(df: pd.DataFrame) -> pd.DataFrame:
+    """The dataset has one row per player PER MATCH. Collapse to one row per
+    player: sum the counting stats across matches, keep the first value for
+    static attributes (name, team, position, etc.)."""
+    key = "player_id" if "player_id" in df.columns else "player_name"
+    if key not in df.columns:
+        return df
+    agg = {
+        c: ("sum" if pd.api.types.is_numeric_dtype(df[c]) else "first")
+        for c in df.columns
+        if c != key
+    }
+    return df.groupby(key, as_index=False).agg(agg)
+
+
 def main():
     csv = find_csv()
     df = pd.read_csv(csv)
-    print(f"\nLoaded {len(df)} rows. Columns:\n  {list(df.columns)}\n")
+    print(f"\nLoaded {len(df)} match-rows. Columns:\n  {list(df.columns)}\n")
+
+    df = one_row_per_player(df)
+    print(f"Collapsed to {len(df)} unique players.\n")
 
     cols = resolve_columns(df)
     print(f"Resolved columns: {cols}\n")
