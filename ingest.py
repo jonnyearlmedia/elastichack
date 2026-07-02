@@ -48,8 +48,11 @@ def create_index(es):
                 "name": {"type": "text", "fields": {"kw": {"type": "keyword"}}},
                 "team": {"type": "keyword"},
                 "position": {"type": "keyword"},
-                "scouting_text": {"type": "text", "copy_to": "scouting_semantic"},
-                "scouting_semantic": {"type": "semantic_text"},
+                "scouting_text": {"type": "text"},
+                "scouting_semantic": {
+                    "type": "semantic_text",
+                    "inference_id": ".elser-2-elasticsearch",
+                },
                 "stats": {"type": "object", "enabled": True},
             }
         },
@@ -80,6 +83,7 @@ def main():
                     "team": row.get(cols.get("team", ""), None),
                     "position": row.get(cols.get("position", ""), None),
                     "scouting_text": text,
+                    "scouting_semantic": text,
                     "stats": {k: _clean(row.get(v)) for k, v in cols.items()},
                 },
             }
