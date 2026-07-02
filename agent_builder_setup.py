@@ -24,12 +24,15 @@ GET_PLAYER_TOOL = {
         "scouting description of their playing style. Call this first to learn an "
         "injured player's position."
     ),
-    "query": (
-        f"FROM {INDEX_NAME} | WHERE name == ?player_name "
-        "| KEEP name, team, position, scouting_text | LIMIT 1"
-    ),
-    "params": {
-        "player_name": {"type": "keyword", "description": "exact player name"}
+    "tags": ["soccer", "scout"],
+    "configuration": {
+        "query": (
+            f"FROM {INDEX_NAME} | WHERE name.kw == ?player_name "
+            "| KEEP name, team, position, scouting_text | LIMIT 1"
+        ),
+        "params": {
+            "player_name": {"type": "string", "description": "exact player name"}
+        },
     },
 }
 
@@ -41,13 +44,16 @@ FIND_REPLACEMENTS_TOOL = {
         "injured player. Returns each candidate's name, team, and scouting "
         "description so you can compare playing styles."
     ),
-    "query": (
-        f"FROM {INDEX_NAME} | WHERE position == ?position AND name != ?exclude_name "
-        "| KEEP name, team, position, scouting_text | LIMIT 8"
-    ),
-    "params": {
-        "position": {"type": "keyword", "description": "position to match, e.g. Forward"},
-        "exclude_name": {"type": "keyword", "description": "injured player's name to exclude"},
+    "tags": ["soccer", "scout"],
+    "configuration": {
+        "query": (
+            f"FROM {INDEX_NAME} | WHERE position == ?position AND name.kw != ?exclude_name "
+            "| KEEP name, team, position, scouting_text | LIMIT 8"
+        ),
+        "params": {
+            "position": {"type": "string", "description": "position to match, e.g. Forward"},
+            "exclude_name": {"type": "string", "description": "injured player's name to exclude"},
+        },
     },
 }
 
@@ -55,16 +61,18 @@ AGENT = {
     "id": "injury_scout",
     "name": "Injury Replacement Scout",
     "description": "Recommends the best like-for-like replacement when a player is injured.",
-    "instructions": (
-        "You are an expert football scout. When the user names an injured player:\n"
-        "1. Call get_player with that name to get their position and playing style.\n"
-        "2. Call find_replacements with that position (and the injured player's name "
-        "as exclude_name) to get the candidate pool.\n"
-        "3. Compare playing styles and recommend the single best replacement. Give a "
-        "punchy brief (<150 words): your #1 pick and why, how the team's shape "
-        "changes, and one risk. Be decisive."
-    ),
-    "tools": ["get_player", "find_replacements"],
+    "configuration": {
+        "instructions": (
+            "You are an expert football scout. When the user names an injured player:\n"
+            "1. Call get_player with that name to get their position and playing style.\n"
+            "2. Call find_replacements with that position (and the injured player's name "
+            "as exclude_name) to get the candidate pool.\n"
+            "3. Compare playing styles and recommend the single best replacement. Give a "
+            "punchy brief (<150 words): your #1 pick and why, how the team's shape "
+            "changes, and one risk. Be decisive."
+        ),
+        "tools": [{"tool_ids": ["get_player", "find_replacements"]}],
+    },
 }
 
 
