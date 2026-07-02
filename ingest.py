@@ -44,34 +44,52 @@ def create_index(es):
     es.indices.create(
         index=INDEX_NAME,
         mappings={
+            # Numeric stat columns are auto-mapped so every stat is queryable in
+            # ES|QL tools; we only pin the fields we filter/sort on as keywords.
+            "dynamic": True,
             "properties": {
                 "name": {"type": "text", "fields": {"kw": {"type": "keyword"}}},
+                "player_name": {"type": "keyword"},
                 "team": {"type": "keyword"},
                 "position": {"type": "keyword"},
+                "nationality": {"type": "keyword"},
+                "club_name": {"type": "keyword"},
+                "preferred_foot": {"type": "keyword"},
                 "scouting_text": {"type": "text"},
                 "scouting_semantic": {
                     "type": "semantic_text",
                     "inference_id": ".elser-2-elasticsearch",
                 },
-                "stats": {"type": "object", "enabled": True},
-            }
+            },
         },
     )
     print(f"Created index {INDEX_NAME}")
 
 
+# Columns that are ratings / rates / static attributes — average them across a
+# player's matches. Everything else numeric is a counting stat we SUM to a total.
+MEAN_HINTS = (
+    "rating", "score", "value", "age", "height", "weight", "jersey",
+    "accuracy", "percentage", "speed", "contribution", "impact",
+    "resistance", "tournament", "_eur", "xg", "xa",
+)
+
+
 def one_row_per_player(df: pd.DataFrame) -> pd.DataFrame:
     """The dataset has one row per player PER MATCH. Collapse to one row per
-    player: sum the counting stats across matches, keep the first value for
-    static attributes (name, team, position, etc.)."""
+    player: SUM counting stats into tournament totals, AVERAGE ratings/values,
+    and keep the first value for text attributes (team, position, etc.)."""
     key = "player_id" if "player_id" in df.columns else "player_name"
     if key not in df.columns:
         return df
-    agg = {
-        c: ("sum" if pd.api.types.is_numeric_dtype(df[c]) else "first")
-        for c in df.columns
-        if c != key
-    }
+    agg = {}
+    for c in df.columns:
+        if c == key:
+            continue
+        if pd.api.types.is_numeric_dtype(df[c]):
+            agg[c] = "mean" if any(h in c.lower() for h in MEAN_HINTS) else "sum"
+        else:
+            agg[c] = "first"
     return df.groupby(key, as_index=False).agg(agg)
 
 
@@ -94,17 +112,11 @@ def main():
     def gen():
         for _, row in df.iterrows():
             text = build_scouting_text(row, cols)
-            yield {
-                "_index": INDEX_NAME,
-                "_source": {
-                    "name": row.get(cols["name"]),
-                    "team": row.get(cols.get("team", ""), None),
-                    "position": row.get(cols.get("position", ""), None),
-                    "scouting_text": text,
-                    "scouting_semantic": text,
-                    "stats": {k: _clean(row.get(v)) for k, v in cols.items()},
-                },
-            }
+            src = {k: _clean(row.get(k)) for k in df.columns}
+            src["name"] = row.get(cols["name"])
+            src["scouting_text"] = text
+            src["scouting_semantic"] = text
+            yield {"_index": INDEX_NAME, "_source": src}
 
     print("Indexing (this embeds every player via EIS — give it a minute)…")
     ok, errors = helpers.bulk(es, gen(), request_timeout=300, raise_on_error=False)
