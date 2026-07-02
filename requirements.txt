@@ -1,0 +1,5 @@
+elasticsearch>=8.14,<9
+streamlit>=1.36
+pandas>=2.0
+python-dotenv>=1.0
+kagglehub>=0.3
